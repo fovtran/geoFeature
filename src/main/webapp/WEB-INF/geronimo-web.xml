@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<web:web-app 	xmlns:web="http://geronimo.apache.org/xml/ns/j2ee/web-2.0.1"
+		xmlns:tomcat="http://geronimo.apache.org/xml/ns/j2ee/web/tomcat-2.0.1"
+		xmlns:sys="http://geronimo.apache.org/xml/ns/deployment-1.2" 
+		xmlns:name="http://geronimo.apache.org/xml/ns/naming-1.2" 
+		xmlns:app="http://geronimo.apache.org/xml/ns/j2ee/application-2.0" 
+		xmlns:sec="http://geronimo.apache.org/xml/ns/security-2.0" 
+		xmlns:pers="http://java.sun.com/xml/ns/persistence">
+    
+<web:context-root>geoFeature</web:context-root>
+
+    <!-- security settings, if any, go here -->
+
+</web:web-app>

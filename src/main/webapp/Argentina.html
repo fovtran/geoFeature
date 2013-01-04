@@ -1,0 +1,143 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+ <title>GeoServer Rich Client</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="stylesheet" href="http://dev.openlayers.org/releases/OpenLayers-2.9.1/theme/default/style.css" type="text/css" /> 
+    <link rel="stylesheet" href="http://dev.openlayers.org/releases/OpenLayers-2.9.1/examples/style.css" type="text/css" /> 
+    <script src="http://dev.openlayers.org/releases/OpenLayers-2.9.1/OpenLayers.js"></script>
+    <style type="text/css">
+        #map {
+            width: 1360px;
+            height: 632px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="location">location</div>
+<div id="scale"></div>
+<div id="nodelist"><em>Click on the map to get feature info</em></div>
+
+<script defer="defer"  type="text/javascript">
+    OpenLayers.IMAGE_RELOAD_ATTEMPTS = 3;
+    OpenLayers.Util.onImageLoadErrorColor = "transparent";
+
+            // sets the HTML provided into the nodelist element
+function setHTML(response){
+ document.getElementById('nodelist').innerHTML = response.responseText;
+};
+ 
+var mapOptions = [];
+var mapLayers = [];
+var mapControls = [];
+
+mapOptions["4326"] = {
+    'theme':'http://dev.openlayers.org/releases/OpenLayers-2.9.1/theme/default/style.css', 
+    'projection':new OpenLayers.Projection('EPSG:4326'),  
+    'zoom':1,
+    'maxZoomLevel':18,
+    'numZoomLevels':19,
+    'maxExtent': new OpenLayers.Bounds(-180,-90,180,90), 
+    'center': new OpenLayers.LonLat(-31.14, -64.43), 
+    'units':'meters',
+    'controls':[]
+}
+    
+var map = new OpenLayers.Map('map', mapOptions["4326"]);
+        
+//Pseudo Layer as BaseLayer
+mapLayers["Fake"] = new OpenLayers.Layer("Fake BaseLayer");
+mapLayers["Fake"].isBaseLayer=true;
+mapLayers["Fake"].displayInLayerSwitcher=false;
+
+var wms = "http://192.168.1.4:8080/geoserver/wms?";
+var ver1 = "version=1.1.0&service=WMS&request=GetMap";
+var ver3 = "version=1.3.0&service=WMS&request=GetMap";
+
+mapLayers["Argentina"] = new OpenLayers.Layer.WMS( "Argentina", wms + ver3,
+            { layers: 'Argentina', projection:"EPSG:4326"},
+            { "opacity":1, ratio: .4, singleTile: false, isBaseLayer: false });
+
+mapLayers["Feature"] = new OpenLayers.Layer.Vector("Water Labels", {
+                protocol: new OpenLayers.Protocol.HTTP({
+                    version: "1.1.0",
+                    url: "http://192.168.1.4:8080/geoserver/wms?service=WFS&version=1.1.0&request=GetFeature&",
+                    featureType: 'Argentina'})
+});
+            
+
+//ESRI high-resolution World Imagery
+mapLayers["ESRI_Satellite"] = new OpenLayers.Layer.ArcGIS93Rest("ESRI Satellite", "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?f=image",
+    {   "format" :'jpeg', "layers" :'show:0' },
+    {   "isBaseLayer":false,
+        "opacity":1,
+        "attribution": "",
+        "visibility":false,
+        yx : {'EPSG:4326' : true}  
+    });
+
+    map.addLayers([mapLayers["Fake"],mapLayers["ESRI_Satellite"],mapLayers["Argentina"]]);
+
+    
+var format = 'image/png';
+// support GetFeatureInfo
+    map.events.register('click', map, function (e) {
+        document.getElementById('nodelist').innerHTML = "Loading... please wait...";
+        var params = {
+        REQUEST: "GetFeatureInfo",
+        EXCEPTIONS: "application/vnd.ogc.se_xml",
+        BBOX: map.getExtent().toBBOX(),
+        SERVICE: "WFS",
+        INFO_FORMAT: 'text/html',
+        QUERY_LAYERS: map.layers[2].params.LAYERS,
+        FEATURE_COUNT: 50,
+        Layers: 'Argentina',
+        WIDTH: map.size.w,
+        HEIGHT: map.size.h,
+        format: format,
+        styles: map.layers[2].params.STYLES,
+        srs: map.layers[2].params.SRS };
+            params.version = "1.1.0";
+            params.j = parseInt(e.xy.x);
+            params.i = parseInt(e.xy.y);
+                        
+// merge filters
+    if(map.layers[2].params.CQL_FILTER != null) {
+        params.cql_filter = map.layers[2].params.CQL_FILTER; };
+    if(map.layers[2].params.FILTER != null) {
+        params.filter = map.layers[2].params.FILTER; };
+    if(map.layers[2].params.FEATUREID) { 
+        params.featureid = map.layers[2].params.FEATUREID; };
+
+ OpenLayers.loadURL("http://192.168.1.4:8080/geoserver/wms?service=WFS&version=1.1.0&request=GetFeature&", params, this, setHTML, setHTML); 
+    OpenLayers.Event.stop(e);
+    });
+
+//    map.addMarkers(new OpenLayers.Layer.Markers("Markers", {'calculateInRange': function() { return true; }}));    
+    map.addControl(new OpenLayers.Control.Navigation());
+    map.addControl(new OpenLayers.Control.LayerSwitcher());
+    map.addControl(new OpenLayers.Control.MousePosition({element: $('location')}));
+    map.addControl(new OpenLayers.Control.Scale($('scale')));
+    map.addControl(new OpenLayers.Control.PanZoomBar());
+    map.addControl(new OpenLayers.Control.Attribution());
+
+/* var styleMap = new OpenLayers.StyleMap({
+    "default": OpenLayers.Feature.Vector.style['default'],
+    "vertex": vertexStyle
+}, {extendDefault: true});
+var layer = new OpenLayers.Layer.Vector('Poi', {styleMap: styleMap});
+map.addControl(new OpenLayers.Control.ModifyFeature(layer, {vertexRenderIntent: "vertex"}));
+map.layers[aktLayer].events.register('featureselected',   map.layers[aktLayer], regFeatureSelected);
+map.layers[aktLayer].events.register('featureunselected', map.layers[aktLayer], regFeatureUnselected); */
+
+    map.setCenter(new OpenLayers.LonLat(-31.41, -64.19), 13);
+/*        map.zoomToMaxExtent();   */
+
+</script>
+
+</body>
+</html>
