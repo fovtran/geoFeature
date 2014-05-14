@@ -9,8 +9,8 @@ Geofeature is a Openlayers WMS client supporting Openserver WMS formats and csv 
 * Tested in Tomcat and Geronimo
 * No css codes 
 
-=Collab/Hire me!
+.h1 Collab/Hire me!
 
 
-=LICENCE
+.h1 LICENCE
 * LGPL
